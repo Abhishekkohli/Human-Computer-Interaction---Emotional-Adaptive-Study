@@ -44,6 +44,147 @@ Unlike traditional e-learning platforms that deliver static content regardless o
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+## Low-Level Design (LLD)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              FLASK FRONTEND                                 │
+│  flask_app.py                                                               │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Routes:                                                              │   │
+│  │   GET  /                    → Render study UI                       │   │
+│  │   GET  /api/materials/{topic} → Get study materials                 │   │
+│  │   GET  /api/material/{topic}/{id} → Get specific material           │   │
+│  │   POST /api/detection/start → Proxy to backend                      │   │
+│  │   POST /api/detection/stop  → Proxy to backend                      │   │
+│  │   GET  /api/emotion         → Proxy to backend                      │   │
+│  │   GET  /api/intervention    → Proxy to backend                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      │ HTTP REST
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              FASTAPI BACKEND                                │
+│  api.py                                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Endpoints:                                                           │   │
+│  │   /api/detection/start  → emotion_fusion.start()                    │   │
+│  │   /api/detection/stop   → emotion_fusion.stop()                     │   │
+│  │   /api/emotion          → emotion_fusion.get_current_emotion()      │   │
+│  │   /api/intervention     → adaptive_engine.get_intervention()        │   │
+│  │   /api/users, /api/sessions, /api/feedback → Database CRUD          │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                    ┌─────────────────┴─────────────────┐
+                    ▼                                   ▼
+┌───────────────────────────────────┐   ┌───────────────────────────────────┐
+│        EmotionFusion              │   │        AdaptiveEngine             │
+│  emotion_fusion.py                │   │  adaptive_engine.py               │
+├───────────────────────────────────┤   ├───────────────────────────────────┤
+│  - facial_detector                │   │  - INTERVENTIONS: Dict            │
+│  - voice_detector                 │   │  - COOLDOWN_PERIODS: Dict         │
+│  - emotion_history: List          │   │  - last_intervention_time: Dict   │
+│  - FACIAL_WEIGHT = 0.6            │   │  - intervention_counts: Dict      │
+│  - VOICE_WEIGHT = 0.4             │   ├───────────────────────────────────┤
+├───────────────────────────────────┤   │  + get_intervention(emotion)      │
+│  + start() → bool                 │   │  + _check_cooldown(emotion)       │
+│  + stop()                         │   │  + get_session_stats()            │
+│  + get_current_emotion()          │   │  + reset_session()                │
+│  + get_detailed_state()           │   └───────────────────────────────────┘
+│  - _fuse_emotions()               │
+│  - _apply_smoothing()             │
+└───────────────────────────────────┘
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+┌─────────────────────┐   ┌─────────────────────┐
+│ FacialEmotionDetector│   │ VoiceEmotionDetector│
+│ facial_detector.py  │   │ voice_detector.py   │
+├─────────────────────┤   ├─────────────────────┤
+│ - cap: VideoCapture │   │ - sample_rate: int  │
+│ - current_emotion   │   │ - chunk_size: int   │
+│ - current_confidence│   │ - current_emotion   │
+│ - EMOTION_MAP: Dict │   │ - current_confidence│
+├─────────────────────┤   ├─────────────────────┤
+│ + start() → bool    │   │ + start() → bool    │
+│ + stop()            │   │ + stop()            │
+│ + get_current_emotion│   │ + get_current_emotion│
+│ - _detection_loop() │   │ - _detection_loop() │
+│                     │   │ - _analyze_audio()  │
+│   ┌─────────────┐   │   │   ┌─────────────┐   │
+│   │  DeepFace   │   │   │   │   Librosa   │   │
+│   │  .analyze() │   │   │   │  .piptrack()│   │
+│   └─────────────┘   │   │   │  .rms()     │   │
+└─────────────────────┘   │   │  .tempo()   │   │
+                          │   └─────────────┘   │
+                          └─────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              DATABASE LAYER                                 │
+│  database.py + models.py                                                    │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Models (SQLAlchemy ORM):                                             │   │
+│  │   User ──┬── StudySession ── EmotionLog                             │   │
+│  │          ├── UserFeedback                                            │   │
+│  │          └── EmotionTrend                                            │   │
+│  │   Intervention (linked to EmotionLog)                                │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Functions:                                                           │   │
+│  │   init_db()  → Create all tables                                    │   │
+│  │   get_db()   → Yield database session                               │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Data Flow
+
+```
+User interacts with UI
+         │
+         ▼
+┌─────────────────┐    Poll every 1s    ┌─────────────────┐
+│  Flask Frontend │ ─────────────────── │ FastAPI Backend │
+└─────────────────┘                     └─────────────────┘
+                                                 │
+                              ┌──────────────────┼──────────────────┐
+                              ▼                  ▼                  ▼
+                     ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+                     │    Webcam    │   │  Microphone  │   │  PostgreSQL  │
+                     │   (OpenCV)   │   │ (sounddevice)│   │   Database   │
+                     └──────────────┘   └──────────────┘   └──────────────┘
+                              │                  │
+                              ▼                  ▼
+                     ┌──────────────┐   ┌──────────────┐
+                     │   DeepFace   │   │   Librosa    │
+                     │   Analysis   │   │   Analysis   │
+                     └──────────────┘   └──────────────┘
+                              │                  │
+                              └────────┬─────────┘
+                                       ▼
+                              ┌──────────────────┐
+                              │  Emotion Fusion  │
+                              │  (60% face +     │
+                              │   40% voice)     │
+                              └──────────────────┘
+                                       │
+                                       ▼
+                              ┌──────────────────┐
+                              │ Adaptive Engine  │
+                              │ (Rule-based      │
+                              │  interventions)  │
+                              └──────────────────┘
+                                       │
+                                       ▼
+                              ┌──────────────────┐
+                              │  UI Displays     │
+                              │  Intervention    │
+                              └──────────────────┘
+```
+
 ## Quick Start
 
 ### 1. Install Dependencies
