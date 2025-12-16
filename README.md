@@ -1,10 +1,8 @@
-
-
-# 🎓 Emotion-Adaptive Study Assistant
+# Emotion-Adaptive Study Assistant
 
 An intelligent Human-Computer Interaction (HCI) system that enhances self-directed learning by dynamically tailoring the study environment to the learner's emotional state.
 
-## 📋 Project Overview
+## Project Overview
 
 Unlike traditional e-learning platforms that deliver static content regardless of user experience, this system integrates:
 
@@ -12,7 +10,7 @@ Unlike traditional e-learning platforms that deliver static content regardless o
 - **Adaptive Response Strategies**: Rule-based interventions tailored to each emotional state
 - **Personalized Feedback**: Database-backed tracking for long-term personalization
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -41,12 +39,12 @@ Unlike traditional e-learning platforms that deliver static content regardless o
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                 DATABASE (PostgreSQL/SQLite)                    │
+│                      DATABASE (PostgreSQL)                      │
 │       [Emotion Logs] [User Feedback] [Personalization]          │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install Dependencies
 
@@ -72,7 +70,7 @@ python run.py --frontend  # Flask on port 5002
 
 Navigate to **http://localhost:5002** to start using the study assistant.
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 emotion_adaptive_study_assistant/
@@ -94,38 +92,20 @@ emotion_adaptive_study_assistant/
 └── README.md               # This file
 ```
 
-## 🎭 Detected Emotions & Interventions
+## Detected Emotions & Interventions
 
 | Emotion | Detection Source | Intervention Type |
 |---------|-----------------|-------------------|
-| **Confused** | Facial analysis | Hints, simplified explanations |
+| **Confused** | Facial + Voice | Hints, simplified explanations |
 | **Frustrated** | Facial + Voice | Mindfulness breaks, encouragement |
-| **Bored** | Facial analysis | Gamified quizzes, challenges |
-| **Curious** | Voice tone | Deep-dive content, advanced topics |
+| **Bored** | Facial + Voice | Gamified quizzes, challenges |
+| **Curious** | Facial + Voice | Deep-dive content, advanced topics |
 | **Anxious** | Facial + Voice | Reassurance, progress reminders |
-| **Confident** | Voice + Facial | Advanced challenges, minimal interruption |
-| 🎯 **Focused** | Sustained neutral | Suppress notifications |
+| **Confident** | Facial + Voice | Advanced challenges, minimal interruption |
+| **Overwhelmed** | Facial + Voice | Simplify content, suggest breaks |
+| **Focused** | Facial + Voice | Suppress notifications |
 
-## 🔧 Configuration
-
-### Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-# Database (defaults to SQLite if not set)
-DATABASE_URL=postgresql://user:password@localhost:5432/emotion_study_db
-
-# Server Ports
-FASTAPI_PORT=8000
-FLASK_PORT=5002
-
-# Detection Settings
-WEBCAM_INDEX=0
-AUDIO_SAMPLE_RATE=16000
-```
-
-### Database Setup (PostgreSQL)
+## Database Setup (PostgreSQL)
 
 The system is configured to connect to PostgreSQL with the following settings:
 
@@ -141,7 +121,7 @@ Connection string: `postgresql://postgres@localhost:5432/postgres`
 
 Make sure PostgreSQL is running on your machine.
 
-## 🔌 API Endpoints
+## API Endpoints
 
 ### Emotion Detection
 - `POST /api/detection/start` - Start webcam/mic detection
@@ -151,18 +131,20 @@ Make sure PostgreSQL is running on your machine.
 
 ### Adaptive Interventions
 - `GET /api/intervention` - Get intervention for current emotion
-- `POST /api/emotion/manual?emotion=confused` - Test with manual emotion
 
 ### User Management
 - `POST /api/users` - Create user
+- `GET /api/users/{user_id}` - Get user by ID
 - `POST /api/sessions` - Start study session
+- `POST /api/sessions/{session_id}/end` - End study session
 - `POST /api/feedback` - Submit feedback
 
 ### Analytics
 - `GET /api/stats` - Session statistics
 - `GET /api/history/{user_id}` - Emotion history
+- `GET /api/health` - Health check
 
-## 💡 How It Works
+## How It Works
 
 ### 1. Emotion Detection (Multimodal)
 
@@ -186,19 +168,19 @@ Make sure PostgreSQL is running on your machine.
 
 Rule-based mapping:
 ```
-confused → Show hints, simplify content
-frustrated → Suggest breaks, offer encouragement
-bored → Activate gamified quizzes
-focused → Suppress interruptions
+confused    → Show hints, simplify content
+frustrated  → Suggest breaks, offer encouragement
+bored       → Activate gamified quizzes
+overwhelmed → Reduce content, highlight key points
+anxious     → Show reassurance, reduce pressure
+curious     → Show deep-dive content
+confident   → Increase difficulty, minimal interruption
+focused     → Suppress interruptions
 ```
 
 Cooldown system prevents intervention spam.
 
-## 🧪 Testing Without Webcam/Microphone
-
-The system includes manual emotion testing buttons in the UI sidebar. Click any emotion to simulate detection and see the adaptive response.
-
-## 📊 Database Schema
+## Database Schema
 
 ```
 Users
@@ -206,29 +188,32 @@ Users
   └── → StudySessions, EmotionLogs, Feedback
 
 StudySessions
-  ├── id, user_id, topic, started_at, ended_at
+  ├── id, user_id, topic, started_at, ended_at, is_active
   └── → EmotionLogs
 
 EmotionLogs
-  ├── id, emotion, confidence, source
+  ├── id, user_id, session_id, emotion, confidence, source
   ├── facial_emotion, facial_confidence
   ├── voice_emotion, voice_confidence
   └── timestamp
 
 Interventions
-  ├── id, emotion_log_id, type, content
-  └── was_helpful
+  ├── id, emotion_log_id, intervention_type, content
+  ├── timestamp, was_helpful
 
 UserFeedback
-  ├── id, user_id, rating, feedback_text
-  └── feedback_type
+  ├── id, user_id, session_id, rating, feedback_text
+  ├── feedback_type, timestamp
+
+EmotionTrends
+  ├── id, user_id, period_type, period_value
+  ├── dominant_emotion, emotion_counts
+  └── avg_focus_duration, updated_at
 ```
 
-
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - DeepFace for facial emotion recognition
 - Librosa for audio analysis
 - FastAPI & Flask for the web framework
 - The HCI research community for foundational concepts in affective computing
-
