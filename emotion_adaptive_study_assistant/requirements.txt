@@ -13,7 +13,6 @@ flask-cors==4.0.0
 # Database
 sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
-alembic==1.12.1
 
 # Computer Vision & Facial Emotion Detection
 opencv-python==4.8.1.78
