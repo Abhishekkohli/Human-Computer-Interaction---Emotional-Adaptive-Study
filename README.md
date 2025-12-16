@@ -185,31 +185,6 @@ User interacts with UI
                               └──────────────────┘
 ```
 
-## Quick Start
-
-### 1. Install Dependencies
-
-```bash
-cd emotion_adaptive_study_assistant
-pip install -r requirements.txt
-```
-
-**Note**: Some dependencies (DeepFace, TensorFlow) may take a while to install.
-
-### 2. Run the Application
-
-```bash
-# Run both backend and frontend (recommended)
-python run.py
-
-# Or run them separately:
-python run.py --backend   # FastAPI on port 8000
-python run.py --frontend  # Flask on port 5002
-```
-
-### 3. Open in Browser
-
-Navigate to **http://localhost:5002** to start using the study assistant.
 
 ## Project Structure
 
@@ -245,22 +220,6 @@ emotion_adaptive_study_assistant/
 | **Confident** | Facial + Voice | Advanced challenges, minimal interruption |
 | **Overwhelmed** | Facial + Voice | Simplify content, suggest breaks |
 | **Focused** | Facial + Voice | Suppress notifications |
-
-## Database Setup (PostgreSQL)
-
-The system is configured to connect to PostgreSQL with the following settings:
-
-```
-Host: localhost
-Port: 5432
-Database: postgres
-Username: postgres
-Password: (none)
-```
-
-Connection string: `postgresql://postgres@localhost:5432/postgres`
-
-Make sure PostgreSQL is running on your machine.
 
 ## API Endpoints
 
