@@ -15,7 +15,7 @@ Unlike traditional e-learning platforms that deliver static content regardless o
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    FRONTEND (Flask - Port 5002)                 │
-│         [Study Materials] [Timer] [Adaptive Prompts]            │
+│         [Study Materials] [Adaptive Prompts]            │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
                               │ REST API
